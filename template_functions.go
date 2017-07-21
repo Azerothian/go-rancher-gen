@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"unicode"
 	// "log"
 	"net/url"
 	"os"
@@ -980,3 +982,31 @@ func when(condition bool, trueValue, falseValue interface{}) interface{} {
 // 	}
 // 	return buf.Bytes()
 // }
+
+func isBlank(str string) bool {
+	for _, r := range str {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func removeBlankLines(reader io.Reader, writer io.Writer) {
+	breader := bufio.NewReader(reader)
+	bwriter := bufio.NewWriter(writer)
+
+	for {
+		line, err := breader.ReadString('\n')
+
+		if !isBlank(line) {
+			bwriter.WriteString(line)
+		}
+
+		if err != nil {
+			break
+		}
+	}
+
+	bwriter.Flush()
+}

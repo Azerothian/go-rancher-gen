@@ -24,12 +24,13 @@ var (
 	notifyOutput    bool
 	includeInactive bool
 	interval        int
+	keepBlankLines  bool
 )
 
 func init() {
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 	log.SetOutput(os.Stdout)
-
+	flag.BoolVar(&keepBlankLines, "keep-blank-lines", false, "keep blank lines in the output file")
 	flag.StringVar(&configFile, "config", "", "Path to optional config file")
 	flag.StringVar(&metadataVersion, "metadata-version", "latest", "Metadata version to use for querying the Metadata API")
 	flag.IntVar(&interval, "interval", 60, "Interval (in seconds) for polling the Metadata API for changes")

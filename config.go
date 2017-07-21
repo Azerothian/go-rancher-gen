@@ -18,6 +18,7 @@ type Config struct {
 	OneTime         bool       `toml:"onetime"`
 	IncludeInactive bool       `toml:"include-inactive"`
 	Templates       []Template `toml:"template"`
+	KeepBlankLines  bool
 }
 
 type Template struct {
@@ -27,7 +28,7 @@ type Template struct {
 	NotifyCmd    string `toml:"notify-cmd"`
 	NotifyLbl    string `toml:"notify-lbl"`
 	NotifyOutput bool   `toml:"notify-output"`
-	Staging			 string ""
+	Staging      string ""
 }
 
 func initConfig() (*Config, error) {
@@ -86,7 +87,7 @@ func setTemplateFromFlags(conf *Config) {
 		NotifyCmd:    notifyCmd,
 		NotifyLbl:    notifyLbl,
 		NotifyOutput: notifyOutput,
-		Staging:			"",
+		Staging:      "",
 	}
 	conf.Templates = []Template{tmpl}
 }

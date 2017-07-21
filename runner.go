@@ -12,11 +12,12 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"text/template"
 	"time"
-        "regexp"
+
 	"github.com/fatih/structs"
 
 	log "github.com/Sirupsen/logrus"
@@ -144,6 +145,12 @@ func (r *runner) processTemplate(funcs template.FuncMap, t Template) error {
 
 		content := buf.Bytes()
 
+		if !r.Config.KeepBlankLines {
+			buf := new(bytes.Buffer)
+			removeBlankLines(bytes.NewReader(content), buf)
+			content = buf.Bytes()
+		}
+
 		if t.Dest == "" {
 			log.Debug("No destination specified. Printing to StdOut")
 			os.Stdout.Write(content)
@@ -183,23 +190,23 @@ func (r *runner) processTemplate(funcs template.FuncMap, t Template) error {
 	}
 
 	if t.NotifyLbl == "" {
-			// Basic check/notify command, no label group
-			r.runCheckNotify(t, "", "");
-		} else {
-			// Possible multi-container check/notify from label group
-			toNotify, _ := r.getLabelGroup(t.NotifyLbl)
+		// Basic check/notify command, no label group
+		r.runCheckNotify(t, "", "")
+	} else {
+		// Possible multi-container check/notify from label group
+		toNotify, _ := r.getLabelGroup(t.NotifyLbl)
 
-			for _, c := range toNotify {
-				log.Debugf("Parsing: %+v", c.Name)
-				parsedCheck, _ := parseCmdTemplate(c, t.CheckCmd)
-				parsedNotify, _ := parseCmdTemplate(c, t.NotifyCmd)
+		for _, c := range toNotify {
+			log.Debugf("Parsing: %+v", c.Name)
+			parsedCheck, _ := parseCmdTemplate(c, t.CheckCmd)
+			parsedNotify, _ := parseCmdTemplate(c, t.NotifyCmd)
 
-				err := r.runCheckNotify(t, parsedCheck, parsedNotify);
-				if err != nil {
-					fmt.Errorf("Check notification failed for check: %v\nnotify: %v\nError: %v", parsedCheck, parsedNotify, err)
-				}
+			err := r.runCheckNotify(t, parsedCheck, parsedNotify)
+			if err != nil {
+				fmt.Errorf("Check notification failed for check: %v\nnotify: %v\nError: %v", parsedCheck, parsedNotify, err)
 			}
 		}
+	}
 
 	return nil
 }
@@ -237,7 +244,7 @@ func (r *runner) runCheckNotify(t Template, parsedCheck string, parsedNotify str
 	return err
 }
 
-func (r *runner) getLabelGroup(label string) ([]Container, error){
+func (r *runner) getLabelGroup(label string) ([]Container, error) {
 	nLabelName, nLabelValue := "", ""
 	toNotify := []Container{} // may be more than just Containers in the future
 
@@ -277,18 +284,18 @@ func (r *runner) getLabelGroup(label string) ([]Container, error){
 		}
 	}
 
-	return toNotify, err;
+	return toNotify, err
 }
 
 func parseCmdTemplate(c Container, command string) (string, error) {
 	ret := command
-  reg, _ := regexp.Compile(`{{[\w\.]*}}`)
-  matches := reg.FindAll( []byte(ret), -1)
+	reg, _ := regexp.Compile(`{{[\w\.]*}}`)
+	matches := reg.FindAll([]byte(ret), -1)
 	cStruct := structs.New(c)
 
-  for _, match := range matches {
-    key := strings.Trim(string(match), "{}")
-		if strings.Index(key, ".") == 0{
+	for _, match := range matches {
+		key := strings.Trim(string(match), "{}")
+		if strings.Index(key, ".") == 0 {
 			key = strings.Replace(key, ".", "", 1)
 		}
 
@@ -298,14 +305,14 @@ func parseCmdTemplate(c Container, command string) (string, error) {
 			ret = strings.Replace(ret, string(match), c.Labels[label], -1)
 		} else {
 			// First check to see if key is a field in this struct
-			for _, f := range cStruct.Fields(){
-				if f.Name() == key{
+			for _, f := range cStruct.Fields() {
+				if f.Name() == key {
 					val, _ := cStruct.Field(key).Value().(string)
 					ret = strings.Replace(ret, string(match), val, -1)
 				}
 			}
 		}
-  }
+	}
 
 	return ret, nil
 }
@@ -466,7 +473,7 @@ func check(command string) error {
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Printf("Check failed, skipping notify-cmd");
+		log.Printf("Check failed, skipping notify-cmd")
 		logCmdOutput(command, out)
 		return err
 	}
@@ -575,4 +582,3 @@ func createStagingFile(content []byte, destFile string) (string, error) {
 	fp.Close()
 	return fp.Name(), nil
 }
-
